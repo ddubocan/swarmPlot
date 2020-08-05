@@ -41,7 +41,7 @@ class Data:
 
 
 
-	def reader(args):
+	def readFile(args):
 		'''Read in data file given options provided by the user. '''
 		print('Reading file {}, using column number {} for categories and column number {} for numerical variables...'.format((args.file), str(args.categoriesColumn), str(args.numericalColumn)))
 		data = args.file
@@ -66,20 +66,26 @@ class Data:
 		df.dropna(inplace = True)
 
 		categories = df.iloc[:,0].unique()
-		df.rename(columns = {0:'categories', 1:'values'} ,inplace = True)
+		# cleanedDf = df.rename(columns = {1:'group', 8:'values'})
+		df.columns = ['group', 'values']
 
-		# subSettedDict = {category: np.random.choice(df.iloc[df.iloc[:,0] == category], size = min([len(df.iloc[df.iloc[:,0]==category]),1000])) 
-		# 				for category in categories}
+		subsettedDict = {}
+		for category in categories:
+			subsample = np.random.choice(df[df['group']==category]['values'], size = min(len(df[df['group']==category]['values']), 1000))
 
-
-
-
-
-
-
+		
+			subsettedDict[category] = subsample
 
 
-	# def dictionarySubset 
+		return subsettedDict
+
+
+
+
+
+
+
+
 
 
 
