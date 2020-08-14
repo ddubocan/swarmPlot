@@ -17,6 +17,8 @@ class Data:
 			Return args object to allow access to different variables downstream.'''
 		parser = argparse.ArgumentParser()
 
+		parser.add_argument('-o', '--output', type = str, default = 'swarmoutput.png',help ='output file name')
+
 		parser.add_argument('file', metavar = 'data file', type=str, help='File containing categorical data. Accepted formats: csv, tst, excel file')
 
 		parser.add_argument('-c', '--categoriesColumn', metavar = 'Categorical variable column', type = int, 
@@ -30,6 +32,21 @@ class Data:
 
 		parser.add_argument('-sheet', '--sheetIndex', metavar = 'Excel sheetname', default = 0, 
 			type =str, help ='Sheetname of choice for plotting, if not entered program will default to plotting data on the first sheet')
+
+		parser.add_argument('-med', '--median', default=True, type=bool, 
+			help = 'True or False for whether to plot median for each categorical variable, default True')
+
+		parser.add_argument('-avg', '--mean', default = False, type=bool, help = 'True or False for whether to plot the mean for each categorical variable, default False')
+
+		parser.add_argument('-pc', '--pointcolor', default = 'black', type = str, 
+			help = 'color for swarmplot points, any valid matplotlib color is accepted as a string')
+
+		parser.add_argument('-ms', '--markerSize', default = .7, type = float, 
+			help = 'floating point markersize for swarmplot, 1 is default for matplotlib. Decrease if increased seperation between categories is desired.')
+
+		parser.add_argument('-xl','--xlabel', default = '', type = str, help = 'label for x axis')
+
+		parser.add_argument('-yl', '--ylabel', default = '', type = str, help = 'label for y axis')
 
 		args = parser.parse_args() 
 		if args.sheetIndex:
@@ -87,29 +104,39 @@ class Data:
 
 class BeeSwarm():
 
-	def __init__(self, args):
-		self.data = datDict 
+	def __init__(self, args, dataDict):
+		self.data = dataDict 
+		values = []
+		for key, value in dataDict.items():
+			values.extend(value)
+		self.y_min = min(values)
+		self.y_max = max(values)
+		self.y_range = max(values) - min(values)
+		self.x_range = len(dataDict) + 1
+		self.color = args.pointcolor
+		self.markersize = args.markerSize
 		self.args = args
 
 
 
-	def swarmer(panel, binDictionary, panelWidth, panelHeight, x_range, y_range, color):
+	def swarmer(self,panel, panelWidth, panelHeight, x_range, y_range, color):
 		'''Plot the swarm plot. Iterate through every bin number, representing number of raw read support. Subsample 1000 points from 
 		the bin number. Iterate through each point in the subsample and plot point if it does not overlap. If it overlaps with a point
 		jitter it right, then left, iteratively increasing distance, until it does not overlap.'''
 		i = 1
+		# counter to space x coordinate of swarm plot
 		labelList = []
-		for binNumber in binDictionary:
+		for binNumber in self.data:
 			print('Plotting {}...'.format(binNumber))
 			labelList.append(binNumber)
-			subsample = binDictionary[binNumber][np.random.choice(binDictionary[binNumber].shape[0], 1000)]
+			# subsample = binDictionary[binNumber][np.random.choice(binDictionary[binNumber].shape[0], 1000)]
 			#subsample a 1000 points from each bin 
-			markerSize = 0.8
+			markerSize = self.markersize
 			#set a markersize that will be used for later calculations
-			y = list(subsample) 
+			y = self.data[binNumber]
 			x = [i] * len(y)
 
-			pt_diamater = markerSize* (1/85)
+			pt_diamater = markerSize* (1/72)
 			x_distance, y_distance = (pt_diamater/panelWidth) * x_range, (pt_diamater/panelHeight) * y_range
 			#calculate the step distance for the y and x axis that needs to be checked for overlap
 
@@ -161,7 +188,7 @@ class BeeSwarm():
 								n += 1
 								continue
 
-			median = np.median(binDictionary[binNumber])
+			median = np.median(self.data[binNumber])
 			#median for each bin of raw read support
 			xLow, xHigh = i-0.425, i+0.425
 			#x values for plotting median
@@ -169,6 +196,20 @@ class BeeSwarm():
 			i += 1
 		return panel, labelList
 
+
+
+	def makeFigure(self):
+		fig = plt.figure(figsize = (7,3))
+		panelWidth, panelHeight = 5,2
+		swarmPan = plt.axes([.7/7, .33/2, panelWidth/7, panelHeight/3])
+		swarmPan, x_labels = self.swarmer(swarmPan, panelWidth, panelHeight, x_range = self.x_range, y_range = self.y_range, color = self.color )
+		swarmPan.set_xlim(0, self.x_range)
+		swarmPan.set_ylim(self.y_min, self.y_max)
+		swarmPan.set_xlabel(self.args.xlabel)
+		swarmPan.set_ylabel(self.args.ylabel)
+		swarmPan.set_xticks(range(1,self.x_range,1))
+		swarmPan.set_xticklabels(x_labels)
+		plt.savefig(self.args.output, dpi = 600 )
 
 
 
@@ -184,7 +225,9 @@ def main():
 
 
 	dataDict = Data.readFile(args)
-	BeeSwarm(args, dataDict)
+	swarm = BeeSwarm(args, dataDict)
+	swarm.makeFigure()
+
 
 
 
