@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 
-
+plt.style.use('BME163.mplstyle')
 
 
 class Data:
